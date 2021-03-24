@@ -17,7 +17,7 @@ describe('03_separation-of-concerns-demo routes', () => {
 
 	let order;
 	beforeEach(async () => {
-		order = await Order.insert({ quantity: 5 });
+		order = await Order.insert({ quantity: 10 });
 	});
 
 	it('creates a new order in our database and sends a text message', async () => {
@@ -31,12 +31,14 @@ describe('03_separation-of-concerns-demo routes', () => {
 		});
 	});
 
-	// it('finds all orders in our database and returns them', async () => {
-	// 	const res = await request(app).get('/api/v1/orders');
+	it('finds all orders in our database and returns them', async () => {
+		const res = await request(app).get('/api/v1/orders');
 
-	// 	expect(res.body).toEqual({
-	// 		id: '1',
-	// 		quantity: 10,
-	// 	});
-	// });
+		expect(res.body).toEqual([
+			{
+				id: '1',
+				quantity: 10,
+			},
+		]);
+	});
 });
