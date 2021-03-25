@@ -4,11 +4,8 @@ const request = require('supertest');
 const app = require('../lib/app');
 const Order = require('../lib/models/Order');
 
-jest.mock('twilio', () => () => ({
-	messages: {
-		create: jest.fn(),
-	},
-}));
+jest.mock('../lib/utils/twilio.js');
+const twilio = require('../lib/utils/twilio.js');
 
 describe('03_separation-of-concerns-demo routes', () => {
 	beforeEach(() => {
@@ -18,6 +15,7 @@ describe('03_separation-of-concerns-demo routes', () => {
 	let order;
 	beforeEach(async () => {
 		order = await Order.insert({ quantity: 10 });
+		twilio.sendSms.mockClear();
 	});
 
 	it('creates a new order in our database and sends a text message', async () => {
@@ -25,6 +23,7 @@ describe('03_separation-of-concerns-demo routes', () => {
 			.post('/api/v1/orders')
 			.send({ quantity: 10 });
 
+		expect(twilio.sendSms).toHaveBeenCalledTimes(1);
 		expect(res.body).toEqual({
 			id: '2',
 			quantity: 10,
@@ -56,6 +55,7 @@ describe('03_separation-of-concerns-demo routes', () => {
 			.put('/api/v1/orders/1')
 			.send({ quantity: 5 });
 
+		expect(twilio.sendSms).toHaveBeenCalledTimes(1);
 		expect(res.body).toEqual({
 			id: '1',
 			quantity: 5,
@@ -65,8 +65,9 @@ describe('03_separation-of-concerns-demo routes', () => {
 	it('should delete an order based on the given ID', async () => {
 		const res = await request(app).delete('/api/v1/orders/1');
 
+		expect(twilio.sendSms).toHaveBeenCalledTimes(1);
 		expect(res.body).toEqual({
-			id: 1,
+			id: '1',
 			quantity: 10,
 		});
 	});
