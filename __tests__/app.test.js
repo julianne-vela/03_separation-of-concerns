@@ -2,39 +2,73 @@ const pool = require('../lib/utils/pool');
 const setup = require('../data/setup');
 const request = require('supertest');
 const app = require('../lib/app');
+const Order = require('../lib/models/Order');
 
-jest.mock('twilio', () => () => ({
-  messages: {
-    create: jest.fn(),
-  },
-}));
+jest.mock('../lib/utils/twilio.js');
+const twilio = require('../lib/utils/twilio.js');
 
-describe('03_separation-of-concerns-demo routes', () => {
-  beforeEach(() => {
-    return setup(pool);
-  });
+describe('03_separation-of-concerns routes', () => {
+	beforeEach(() => {
+		return setup(pool);
+	});
 
-  it('creates a new order in our database and sends a text message', () => {
-    return request(app)
-      .post('/api/v1/orders')
-      .send({ quantity: 10 })
-      .then((res) => {
-        // expect(createMessage).toHaveBeenCalledTimes(1);
-        expect(res.body).toEqual({
-          id: '1',
-          quantity: 10,
-        });
-      });
-  });
+	let order;
+	beforeEach(async () => {
+		order = await Order.insert({ quantity: 10 });
+		twilio.sendSms.mockClear();
+	});
 
-  it('ASYNC/AWAIT: creates a new order in our database and sends a text message', async () => {
-    const res = await request(app)
-      .post('/api/v1/orders')
-      .send({ quantity: 10 });
+	it('creates a new order in our database and sends a text message', async () => {
+		const res = await request(app)
+			.post('/api/v1/orders')
+			.send({ quantity: 10 });
 
-    expect(res.body).toEqual({
-      id: '1',
-      quantity: 10,
-    });
-  });
+		expect(twilio.sendSms).toHaveBeenCalledTimes(1);
+		expect(res.body).toEqual({
+			id: '2',
+			quantity: 10,
+		});
+	});
+
+	it('finds all orders in our database', async () => {
+		const res = await request(app).get('/api/v1/orders');
+
+		expect(res.body).toEqual([
+			{
+				id: '1',
+				quantity: 10,
+			},
+		]);
+	});
+
+	it('finds a specific order by its id', async () => {
+		const res = await request(app).get('/api/v1/orders/1');
+
+		expect(res.body).toEqual({
+			id: '1',
+			quantity: 10,
+		});
+	});
+
+	it('should update an order based on the given ID', async () => {
+		const res = await request(app)
+			.put('/api/v1/orders/1')
+			.send({ quantity: 5 });
+
+		expect(twilio.sendSms).toHaveBeenCalledTimes(1);
+		expect(res.body).toEqual({
+			id: '1',
+			quantity: 5,
+		});
+	});
+
+	it('should delete an order based on the given ID', async () => {
+		const res = await request(app).delete('/api/v1/orders/1');
+
+		expect(twilio.sendSms).toHaveBeenCalledTimes(1);
+		expect(res.body).toEqual({
+			id: '1',
+			quantity: 10,
+		});
+	});
 });
